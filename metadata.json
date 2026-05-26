@@ -1,0 +1,6 @@
+{
+  "name": "CyberOps Simulator",
+  "description": "Plataforma gamificada e prática de simulação para redes, Linux, BGP, e cibersegurança, focada em inclusão social e empregabilidade.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
