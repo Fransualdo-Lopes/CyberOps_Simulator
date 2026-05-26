@@ -21,7 +21,9 @@ import {
   Check,
   Square,
   Eye,
-  EyeOff
+  EyeOff,
+  Coins,
+  Zap
 } from 'lucide-react';
 import { CHALLENGES, SKILL_TREE, INITIAL_ACHIEVEMENTS, INITIAL_RECRUITERS } from './data/challenges';
 import { Challenge, NetworkNode, NetworkLink, IncidentAlert, TerminalLog, UserProfile, SkillNode, Achievement, RecruiterJob } from './types';
@@ -86,6 +88,8 @@ export default function App() {
   // Victory celebration state
   const [showVictoryModal, setShowVictoryModal] = useState(false);
   const [victoryChallengeTitle, setVictoryChallengeTitle] = useState('');
+  const [victoryXpReward, setVictoryXpReward] = useState(0);
+  const [victoryCreditsReward, setVictoryCreditsReward] = useState(0);
 
   // Simulated metrics over time
   const [simulatedMetrics, setSimulatedMetrics] = useState<{ name: string; tráfego: number; cpu: number; alertas: number }[]>(() => {
@@ -399,6 +403,8 @@ export default function App() {
 
     // Trigger Success celebration screen UI
     setVictoryChallengeTitle(matchedChall.title);
+    setVictoryXpReward(matchedChall.xpReward);
+    setVictoryCreditsReward(matchedChall.creditsReward);
     setShowVictoryModal(true);
   };
 
@@ -737,10 +743,14 @@ export default function App() {
                                       </div>
                                       <div>
                                         <div className="flex items-center space-x-1.5 flex-wrap">
-                                          <span className="text-[9px] font-mono uppercase bg-zinc-800/80 px-1.5 py-0.5 rounded text-zinc-400">
+                                          <span className={`text-[9px] font-mono uppercase px-1.5 py-0.5 rounded transition ${
+                                            s.done
+                                              ? 'bg-emerald-500/10 text-emerald-400 font-semibold border border-emerald-500/20'
+                                              : 'bg-zinc-800/80 text-zinc-400'
+                                          }`}>
                                             Etapa {idx + 1}
                                           </span>
-                                          <span className={`text-[11px] font-bold font-mono tracking-tight ${s.done ? 'text-emerald-405' : 'text-[#c0c0cf]'}`}>
+                                          <span className={`text-[11px] font-bold font-mono tracking-tight ${s.done ? 'text-emerald-400' : 'text-[#c0c0cf]'}`}>
                                             {s.label}
                                           </span>
                                         </div>
@@ -1058,6 +1068,25 @@ export default function App() {
                 <p className="text-[11px] leading-relaxed text-[#c0c0cf] mt-2">
                   Os indicadores de Uptime estabilizaram, o tráfego de backbone voltou ao normal e a telemetria do SOC cessou os picos de alarmes operacionais. Você foi promovido e acumulou insígnias digitais!
                 </p>
+              </div>
+
+              {/* REWARDS GRID */}
+              <div className="grid grid-cols-2 gap-3 my-4">
+                <div className="bg-amber-500/5 border border-amber-500/10 rounded-sm p-3.5 flex flex-col items-center justify-center">
+                  <div className="flex items-center gap-1.5 text-amber-400 font-mono text-sm font-bold">
+                    <Zap className="w-4 h-4 text-amber-500 fill-amber-500/35" />
+                    +{victoryXpReward} XP
+                  </div>
+                  <span className="text-[10px] text-zinc-500 font-mono uppercase mt-0.5 tracking-wider">Experiência</span>
+                </div>
+                
+                <div className="bg-cyan-500/5 border border-cyan-500/10 rounded-sm p-3.5 flex flex-col items-center justify-center">
+                  <div className="flex items-center gap-1.5 text-cyan-400 font-mono text-sm font-bold">
+                    <Coins className="w-4 h-4 text-cyan-500 fill-cyan-500/35" />
+                    ${victoryCreditsReward}.00 CC
+                  </div>
+                  <span className="text-[10px] text-zinc-500 font-mono uppercase mt-0.5 tracking-wider">Cyber Créditos</span>
+                </div>
               </div>
 
               <button
