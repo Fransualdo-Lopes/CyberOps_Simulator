@@ -14,6 +14,98 @@ interface TerminalProps {
   terminalFileSystem?: Record<string, VirtualFileSystemNode>;
 }
 
+interface TypewriterLogLineProps {
+  text: string;
+  type: 'input' | 'output' | 'system' | 'error' | 'success';
+  colorClass: string;
+}
+
+const renderInputLine = (text: string) => {
+  const linuxMatch = text.match(/^([a-zA-Z0-9_\-]+)@([a-zA-Z0-9_\-]+):([^$#]*)([$#])(?:\s(.*))?$/);
+  if (linuxMatch) {
+    const [_, user, host, dir, promptChar, command = ''] = linuxMatch;
+    return (
+      <span className="font-mono">
+        <span className={user === 'root' ? 'text-amber-400 font-semibold' : 'text-emerald-400 font-semibold'}>{user}</span>
+        <span className="text-zinc-500">@</span>
+        <span className={user === 'root' ? 'text-rose-400/90 font-semibold' : 'text-emerald-400/90 font-semibold'}>{host}</span>
+        <span className="text-zinc-500">:</span>
+        <span className="text-sky-400 font-semibold">{dir}</span>
+        <span className="text-zinc-300 font-semibold">{promptChar} </span>
+        <span className="text-zinc-100 font-medium">{command}</span>
+      </span>
+    );
+  }
+
+  const ciscoMatch = text.match(/^(Roteador-Core-01)(.*)#(?:\s(.*))?$/);
+  if (ciscoMatch) {
+    const [_, host, mode, command = ''] = ciscoMatch;
+    return (
+      <span className="font-mono">
+        <span className="text-zinc-400 font-bold">{host}</span>
+        <span className="text-cyan-500 font-normal">{mode}</span>
+        <span className="text-zinc-400 font-bold"># </span>
+        <span className="text-zinc-100 font-medium">{command}</span>
+      </span>
+    );
+  }
+
+  return <span className="text-cyan-400 font-bold">{text}</span>;
+};
+
+const TypewriterLogLine: React.FC<TypewriterLogLineProps> = ({ text, type, colorClass }) => {
+  const [displayedText, setDisplayedText] = useState('');
+
+  useEffect(() => {
+    if (type === 'input') {
+      setDisplayedText(text);
+      return;
+    }
+
+    setDisplayedText('');
+    
+    const totalLength = text.length;
+    let step = 1;
+    let intervalTime = 12;
+
+    if (totalLength > 400) {
+      // Very long text: show immediately to prevent user frustration
+      setDisplayedText(text);
+      return;
+    } else if (totalLength > 150) {
+      step = 6;
+      intervalTime = 6;
+    } else if (totalLength > 50) {
+      step = 2;
+      intervalTime = 8;
+    }
+
+    let currentLength = 0;
+    const interval = setInterval(() => {
+      currentLength += step;
+      if (currentLength >= totalLength) {
+        setDisplayedText(text);
+        clearInterval(interval);
+      } else {
+        setDisplayedText(text.slice(0, currentLength));
+      }
+    }, intervalTime);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [text, type]);
+
+  return (
+    <div className={`whitespace-pre-wrap leading-relaxed ${colorClass} transition-all duration-75`}>
+      {type === 'input' ? renderInputLine(displayedText) : displayedText}
+      {displayedText.length < text.length && (
+        <span className="inline-block w-1.5 h-3.5 bg-cyan-400 ml-0.5 animate-pulse align-middle" />
+      )}
+    </div>
+  );
+}
+
 export default function Terminal({
   logs,
   deviceContext,
@@ -47,7 +139,7 @@ export default function Terminal({
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [logs]);
+  }, [logs, inputValue]);
 
   // Focus input automatically on tap
   const handleTerminalClick = () => {
@@ -264,6 +356,49 @@ export default function Terminal({
     return `${user}@${host}:${dirDisplay}${promptChar} `;
   };
 
+  const renderPromptPrefix = () => {
+    if (challengeId === 'bgp-hijacking') {
+      let modeText = '';
+      if (deviceContext.includes('(config-route-map)')) {
+        modeText = '(config-route-map)';
+      } else if (deviceContext.includes('(config-router)')) {
+        modeText = '(config-router)';
+      } else if (deviceContext.includes('(config)')) {
+        modeText = '(config)';
+      }
+      return (
+        <span className="font-mono text-zinc-400 font-bold select-none">
+          Roteador-Core-01<span className="text-cyan-500 font-normal">{modeText}</span>#<span className="text-zinc-500 ml-1"></span>
+        </span>
+      );
+    }
+    
+    // Linux Servers
+    const isSoc = challengeId === 'soc-ransomware';
+    const host = isSoc ? 'servidor-http' : 'servidor-auth';
+    const user = isSoc ? 'apache' : 'root';
+    const homeDir = isSoc ? '/var/www' : '/home/user';
+    const promptChar = user === 'root' ? '#' : '$';
+    
+    let dirDisplay = currentDir;
+    if (currentDir === homeDir) {
+      dirDisplay = '~';
+    } else if (currentDir === '/root' && user === 'root') {
+      dirDisplay = '~';
+    }
+    
+    return (
+      <span className="font-mono font-semibold select-none text-[11px]">
+        <span className={user === 'root' ? 'text-amber-400 font-bold' : 'text-emerald-400 font-bold'}>{user}</span>
+        <span className="text-zinc-500">@</span>
+        <span className={user === 'root' ? 'text-rose-400/90 font-bold' : 'text-emerald-400/90 font-bold'}>{host}</span>
+        <span className="text-zinc-500">:</span>
+        <span className="text-sky-400">{dirDisplay}</span>
+        <span className="text-zinc-300 ml-1">{promptChar} </span>
+      </span>
+    );
+  };
+
   const shakeVariants = {
     shake: {
       x: [0, -8, 8, -8, 8, -4, 4, -2, 2, 0],
@@ -341,37 +476,41 @@ export default function Terminal({
         className="flex-1 p-4 overflow-y-auto space-y-1.5 scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent text-left"
       >
         {logs.map((log, idx) => (
-          <div key={`log-${idx}`} className={`whitespace-pre-wrap leading-relaxed ${getLogColorClass(log.type)}`}>
-            {log.text}
-          </div>
+          <TypewriterLogLine
+            key={`log-${idx}-${log.text.substring(0, 15)}`}
+            text={log.text}
+            type={log.type}
+            colorClass={getLogColorClass(log.type)}
+          />
         ))}
-      </div>
 
-      {/* Interactive Command Input line */}
-      <form onSubmit={handleSubmit} className="flex border-t border-[#1e2130] bg-[#05060a] p-3">
-        <span className="text-[#5e6382] mr-2 flex-shrink-0 select-none">
-          {getPromptPrefix()}
-        </span>
-        <input
-          ref={inputRef}
-          type="text"
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          onKeyDown={handleKeyDown}
-          autoComplete="off"
-          autoCorrect="off"
-          autoCapitalize="off"
-          spellCheck="false"
-          placeholder="Digite um comando ou use [Tab] para dicas..."
-          className="flex-1 bg-transparent border-none outline-none text-[#ffffff] placeholder-[#5e6382] font-mono caret-cyan-400 select-text"
-        />
-        <button
-          type="submit"
-          className="ml-2 p-1 text-emerald-500 hover:text-emerald-400 rounded transition"
-        >
-          <Play className="w-4 h-4" />
-        </button>
-      </form>
+        {/* Interactive Command Input line directly inline at the bottom */}
+        <form onSubmit={handleSubmit} className="flex items-center pt-1">
+          <span className="mr-1 flex-shrink-0 select-none whitespace-nowrap">
+            {renderPromptPrefix()}
+          </span>
+          <input
+            ref={inputRef}
+            type="text"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck="false"
+            className="flex-1 bg-transparent border-none outline-none focus:outline-none focus:ring-0 focus:border-none text-[#ffffff] font-mono caret-cyan-400 select-text p-0 m-0"
+            style={{ ring: 'none', boxShadow: 'none' }}
+          />
+          <button
+            type="submit"
+            className="ml-2 p-1 text-cyan-500 hover:text-cyan-400 opacity-40 hover:opacity-100 transition rounded"
+            title="Executar Comando (Enter)"
+          >
+            <Play className="w-3.5 h-3.5" />
+          </button>
+        </form>
+      </div>
     </motion.div>
   );
 }
