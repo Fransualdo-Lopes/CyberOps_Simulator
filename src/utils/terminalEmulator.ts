@@ -68,7 +68,8 @@ export function executeLinuxCommand(
   currentDir: string,
   fileSystem: Record<string, VirtualFileSystemNode>,
   challengeId: string,
-  socState: { killedMalware: boolean; deletedWebshell: boolean; fixedPermissions: boolean }
+  socState: { killedMalware: boolean; deletedWebshell: boolean; fixedPermissions: boolean },
+  isAlreadyResolved?: boolean
 ): TerminalExecutionResult {
   const resultLogs: TerminalLog[] = [];
   const parts = command.trim().split(/\s+/);
@@ -357,7 +358,11 @@ export function executeLinuxCommand(
         if (challengeId === 'linux-basics' && pattern.toLowerCase().includes('failed password')) {
           resultLogs.push({ text: '\n✓ [REGISTRO DE BRUTE FORCE IDENTIFICADO]', type: 'success' });
           resultLogs.push({ text: 'Parabéns! Você utilizou a ferramenta de filtro corretamente.', type: 'success' });
-          resultLogs.push({ text: 'Diagnóstico concluído. Reporte o IP "198.51.100.42" para o Mentor IA no Chat lateral ou encerre o lab clicando em Resolver!', type: 'success' });
+          if (isAlreadyResolved) {
+            resultLogs.push({ text: 'Diagnóstico concluído. Esta missão já foi mitigada! Siga para a próxima missão recomendada: "SOC - Neutralização de Ransomware e Web Shell" usando o seletor abaixo!', type: 'success' });
+          } else {
+            resultLogs.push({ text: 'Diagnóstico concluído. Reporte o IP "198.51.100.42" para o Mentor IA no Chat lateral ou encerre o lab clicando em Resolver!', type: 'success' });
+          }
           triggerResolution = true;
         }
       } else {
@@ -426,7 +431,7 @@ export function executeLinuxCommand(
           // Check if also completed other parts
           checkSocResolution(updatedSocState, resultLogs, () => {
             triggerResolution = true;
-          });
+          }, isAlreadyResolved);
         }
       } else {
         resultLogs.push({ text: `kill: (${pidArg}) - No such process or Permission Denied`, type: 'error' });
@@ -469,7 +474,7 @@ export function executeLinuxCommand(
         
         checkSocResolution(updatedSocState, resultLogs, () => {
           triggerResolution = true;
-        });
+        }, isAlreadyResolved);
       }
       break;
     }
@@ -502,7 +507,7 @@ export function executeLinuxCommand(
           
           checkSocResolution(updatedSocState, resultLogs, () => {
             triggerResolution = true;
-          });
+          }, isAlreadyResolved);
         }
       } else {
         resultLogs.push({ text: `Subsitituição de octal '${mode}' registrada, mas pode não resolver a mitigação do lab de segurança. Use '644' para consertar a página pública de index do apache.`, type: 'system' });
@@ -552,12 +557,17 @@ export function executeLinuxCommand(
 function checkSocResolution(
   state: { killedMalware: boolean; deletedWebshell: boolean; fixedPermissions: boolean },
   logs: TerminalLog[],
-  onSuccess: () => void
+  onSuccess: () => void,
+  isAlreadyResolved?: boolean
 ): void {
   if (state.killedMalware && state.deletedWebshell && state.fixedPermissions) {
     logs.push({ text: '\n✓ [TODOS OS OBJETIVOS DO SOC RESOLVIDOS COM EXCELENCIA!]', type: 'success' });
     logs.push({ text: 'Processo encerrado + Código malicioso excluído + Index restaurada.', type: 'success' });
-    logs.push({ text: 'Clique em RESOLVER LABORATÓRIO no modal superior para faturar cyber créditos!', type: 'success' });
+    if (isAlreadyResolved) {
+      logs.push({ text: 'Objetivos alcançados. Esta missão já foi resolvida com sucesso! Você pode prosseguir para a próxima missão recomendada: "Core ISP - Mitigação de Sequestro BGP"!', type: 'success' });
+    } else {
+      logs.push({ text: 'Clique em RESOLVER LABORATÓRIO no modal superior para faturar cyber créditos!', type: 'success' });
+    }
     onSuccess();
   }
 }
@@ -573,7 +583,8 @@ export function executeBgpCommand(
     matchedPrefixList: boolean;
     enteredRouterBgp: boolean;
     configuredNeighbor: boolean;
-  }
+  },
+  isAlreadyResolved?: boolean
 ): TerminalExecutionResult {
   const resultLogs: TerminalLog[] = [];
   const trimmed = command.trim();
@@ -597,7 +608,11 @@ export function executeBgpCommand(
       if (updatedBgpState.createdRouteMap && updatedBgpState.matchedPrefixList && updatedBgpState.enteredRouterBgp && updatedBgpState.configuredNeighbor) {
         resultLogs.push({ text: '✓ [SOFT RESET EXECUTADO COM SUCESSO]', type: 'success' });
         resultLogs.push({ text: 'Recalculando rotas com neighbor 180.2.2.1-AS54321...', type: 'system' });
-        resultLogs.push({ text: 'Filtro INBOUND de route-map estabelecido. Ajustado convergência de rotas e mitigado anúncio falso!', type: 'success' });
+        if (isAlreadyResolved) {
+          resultLogs.push({ text: 'Filtro INBOUND de route-map estabelecido. Esta missão já foi mitigada com sucesso e as tabelas de rotas globais normalizadas!', type: 'success' });
+        } else {
+          resultLogs.push({ text: 'Filtro INBOUND de route-map estabelecido. Ajustado convergência de rotas e mitigado anúncio falso! Clique em RESOLVER LABORATÓRIO para concluir!', type: 'success' });
+        }
         triggerResolution = true;
       } else {
         const missing = [];

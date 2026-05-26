@@ -324,7 +324,7 @@ export default function App() {
     let nextLogs: TerminalLog[] = [];
 
     if (currentChallenge.id === 'bgp-hijacking') {
-      const result = executeBgpCommand(trimmed, deviceContext, bgpState);
+      const result = executeBgpCommand(trimmed, deviceContext, bgpState, profile.resolvedChallenges.includes('bgp-hijacking'));
       nextLogs = result.logs;
       setDeviceContext(result.nextDeviceContext);
       setSelectedNodeId(result.nextDeviceContext);
@@ -336,7 +336,14 @@ export default function App() {
       }
     } else {
       // Linux environments
-      const result = executeLinuxCommand(trimmed, terminalCurrentDir, terminalFileSystem, currentChallenge.id, socState);
+      const result = executeLinuxCommand(
+        trimmed, 
+        terminalCurrentDir, 
+        terminalFileSystem, 
+        currentChallenge.id, 
+        socState, 
+        profile.resolvedChallenges.includes(currentChallenge.id)
+      );
       nextLogs = result.logs;
       setTerminalCurrentDir(result.nextDir);
       setTerminalFileSystem(result.nextFileSystem);
@@ -880,9 +887,36 @@ export default function App() {
                   <h3 className="font-sans font-bold text-sm text-cyan-400 uppercase tracking-wider">
                     {currentChallenge.title}
                   </h3>
-                  <p className="text-[11.5px] text-[#c0c0cf] mt-2 leading-relaxed">
-                    <strong>Missão:</strong> {currentChallenge.context}
-                  </p>
+                  {profile.resolvedChallenges.includes(currentChallenge.id) ? (
+                    <div className="mt-2.5 p-3 rounded-sm bg-emerald-500/10 border border-emerald-500/20 text-[11px] leading-relaxed text-zinc-300">
+                      <div className="flex items-center space-x-1.5 text-emerald-400 font-bold mb-1">
+                        <CheckCircle className="w-4 h-4" />
+                        <span>Incidente Mitigado com Sucesso!</span>
+                      </div>
+                      <div>
+                        Todos os objetivos deste laboratório foram concluídos e a estabilidade operacional foi restaurada.
+                        {currentChallenge.id === 'linux-basics' && (
+                          <span className="block mt-1.5 font-sans font-semibold text-cyan-400">
+                            👉 Próxima Missão Recomendada: Ative o laboratório <span className="underline font-bold">SOC - Neutralização de Ransomware e Web Shell</span> no seletor de simulações acima.
+                          </span>
+                        )}
+                        {currentChallenge.id === 'soc-ransomware' && (
+                          <span className="block mt-1.5 font-sans font-semibold text-cyan-400">
+                            👉 Próxima Missão Recomendada: Ative o laboratório <span className="underline font-bold">Core ISP - Mitigação de Sequestro BGP</span> no seletor de simulações acima.
+                          </span>
+                        )}
+                        {currentChallenge.id === 'bgp-hijacking' && (
+                          <span className="block mt-1.5 font-sans font-semibold text-cyan-400">
+                            🏆 Parabéns! Você concluiu todos os nossos laboratórios de simulação ativa. Explore o Mapa do Mundo, refine sua árvore de habilidades ou se candidate a vagas em 'Engajamento & Social'.
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-[11.5px] text-[#c0c0cf] mt-2 leading-relaxed">
+                      <strong>Missão:</strong> {currentChallenge.context}
+                    </p>
+                  )}
                   <div className="mt-4 pt-3.5 border-t border-[#1e2130] grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs font-mono text-[#5e6382] lg:divide-x lg:divide-[#1e2130]">
                     <div className="col-span-1">
                       <span className="block text-[8.5px] uppercase font-bold text-[#5e6382]">Equipamento Alvo</span>
