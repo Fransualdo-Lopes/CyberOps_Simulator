@@ -586,6 +586,45 @@ export function executeBgpCommand(
   
   const updatedBgpState = { ...bgpState };
 
+  // Support BGP soft-clear globally or with 'do' prefix in any submode, so clearing is robust.
+  if (lower.startsWith('clear ip bgp') || lower.startsWith('do clear ip bgp')) {
+    const isDo = lower.startsWith('do ');
+    const commandToParse = isDo ? trimmed.substring(3).trim() : trimmed;
+    const cleanLower = commandToParse.toLowerCase();
+    const clearArg = cleanLower.replace('clear ip bgp', '').trim();
+    
+    if (clearArg === '180.2.2.1 soft' || clearArg === '* soft') {
+      if (updatedBgpState.createdRouteMap && updatedBgpState.matchedPrefixList && updatedBgpState.enteredRouterBgp && updatedBgpState.configuredNeighbor) {
+        resultLogs.push({ text: '✓ [SOFT RESET EXECUTADO COM SUCESSO]', type: 'success' });
+        resultLogs.push({ text: 'Recalculando rotas com neighbor 180.2.2.1-AS54321...', type: 'system' });
+        resultLogs.push({ text: 'Filtro INBOUND de route-map estabelecido. Ajustado convergência de rotas e mitigado anúncio falso!', type: 'success' });
+        triggerResolution = true;
+      } else {
+        const missing = [];
+        if (!updatedBgpState.createdRouteMap) missing.push('criar o route-map ("route-map FILTER-BGP deny 10")');
+        if (!updatedBgpState.matchedPrefixList) missing.push('associar a prefix-list ("match ip address prefix-list FALSE-BGP")');
+        if (!updatedBgpState.enteredRouterBgp) missing.push('configurar o processo BGP ("router bgp 65112")');
+        if (!updatedBgpState.configuredNeighbor) missing.push('desafiar/vincular o vizinho ("neighbor 180.2.2.1 route-map FILTER-BGP in")');
+        
+        resultLogs.push({ 
+          text: `Soft Reset executado. Entretanto, nenhuma mudança de tráfego ocorreu porque as configurações do Route-map estão incompletas ou não estão vinculadas ao vizinho BGP nas configurações da sessão.\n⚠️ Falta realizar: ${missing.join(', ')}.`, 
+          type: 'error' 
+        });
+      }
+    } else {
+      resultLogs.push({ text: '% Command incomplete or invalid syntax. Try: "clear ip bgp 180.2.2.1 soft"', type: 'error' });
+    }
+    
+    return {
+      logs: resultLogs,
+      nextDir: '/',
+      nextFileSystem: {},
+      nextDeviceContext,
+      bgpConfigState: updatedBgpState,
+      triggerResolution
+    };
+  }
+
   // Route-map logic, Router BGP configs:
   if (cmdBase === 'exit') {
     if (deviceContext === 'Roteador-Core-01(config-route-map)') {
@@ -683,21 +722,6 @@ export function executeBgpCommand(
       } 
       else {
         resultLogs.push({ text: `% Incomplete command or options: "show ${showArg}". Try "show ip bgp summary" or "show running-config".`, type: 'error' });
-      }
-    } 
-    else if (trimmed.startsWith('clear ip bgp')) {
-      const clearArg = trimmed.replace('clear ip bgp', '').trim();
-      if (clearArg === '180.2.2.1 soft' || clearArg === '* soft') {
-        if (updatedBgpState.createdRouteMap && updatedBgpState.matchedPrefixList && updatedBgpState.enteredRouterBgp && updatedBgpState.configuredNeighbor) {
-          resultLogs.push({ text: '✓ [SOFT RESET EXECUTADO COM SUCESSO]', type: 'success' });
-          resultLogs.push({ text: 'Recalculando rotas com neighbor 180.2.2.1...', type: 'system' });
-          resultLogs.push({ text: 'Filtro INBOUND de route-map estabelecido. 1 rota suspensa, tráfego FintechSecure normalizado!', type: 'success' });
-          triggerResolution = true;
-        } else {
-          resultLogs.push({ text: 'Soft Reset executado. Entretanto, nenhuma mudança de tráfego ocorreu porque as configurações do Route-map estão incompletas ou não estão vinculadas ao vizinho BGP nas configurações da sessão.', type: 'error' });
-        }
-      } else {
-        resultLogs.push({ text: '% Command incomplete or invalid syntax. Try: "clear ip bgp 180.2.2.1 soft"', type: 'error' });
       }
     } 
     else if (trimmed.startsWith('ping')) {

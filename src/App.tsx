@@ -226,7 +226,7 @@ export default function App() {
     const lower = trimmed.toLowerCase();
     const cmdBase = trimmed.split(/\s+/)[0].toLowerCase();
 
-    if (cmdBase === 'clear') {
+    if (lower === 'clear' || lower === 'cls') {
       setTerminalLogs([]);
       return;
     }
