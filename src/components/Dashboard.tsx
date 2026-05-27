@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, BarChart, Bar, ScatterChart, Scatter, ZAxis, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { Activity, ShieldAlert, WifiOff, RefreshCw, BarChart2, Radio, Server, CheckCircle } from 'lucide-react';
 import { IncidentAlert, Challenge } from '../types';
 
@@ -16,9 +16,37 @@ export default function Dashboard({
   uptime
 }: DashboardProps) {
   const [activeTab, setActiveTab] = useState<'grafana' | 'wazuh'>('grafana');
+  const [wazuhChart, setWazuhChart] = useState<'bar' | 'scatter'>('scatter');
 
   const resolvedCount = alerts.filter(a => a.status === 'resolved').length;
   const activeCount = alerts.filter(a => a.status === 'active').length;
+
+  const scatterData = simulatedTraffic.flatMap((t, idx) => {
+    const timeVal = parseFloat(t.name) || (idx * 5);
+    const seed1 = (idx * 17) % 31;
+    const seed2 = (idx * 13) % 43;
+    const seed3 = (idx * 19) % 23;
+    return [
+      {
+        time: timeVal,
+        intensity: Math.min(100, Math.max(10, Math.floor(t.alertas * 15 + seed1 + (t.cpu * 0.3)))),
+        impact: Math.min(80, Math.max(15, Math.floor(30 + seed2))),
+        type: 'Crítico'
+      },
+      {
+        time: timeVal + 1.5,
+        intensity: Math.min(95, Math.max(5, Math.floor(t.cpu * 0.7 + seed2 - 10))),
+        impact: Math.min(50, Math.max(10, Math.floor(20 + seed3))),
+        type: 'Médio'
+      },
+      {
+        time: timeVal + 3.2,
+        intensity: Math.min(80, Math.max(5, Math.floor((t.tráfego / 8) + seed3 - 20))),
+        impact: Math.min(40, Math.max(5, Math.floor(10 + seed1))),
+        type: 'DDoS/Scan'
+      }
+    ];
+  });
 
   return (
     <div className="flex flex-col h-[340px] bg-[#05060a] border border-[#1e2130] rounded-sm overflow-hidden relative">
@@ -165,11 +193,29 @@ export default function Dashboard({
               </div>
             </div>
 
-            {/* Right Column alerts statistics bar chart */}
+            {/* Right Column alerts statistics bar/scatter chart */}
             <div className="bg-[#0a0c16] border border-[#1e2130] rounded-sm p-3 flex flex-col justify-between h-[230px] text-left">
               <div>
-                <div className="text-[10px] text-[#c0c0cf] font-mono font-bold uppercase tracking-wider mb-1">
-                  Severidade de Ameaças Reportadas
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="text-[10px] text-[#c0c0cf] font-mono font-bold uppercase tracking-wider">
+                    {wazuhChart === 'scatter' ? 'Densidade de Ataques' : 'Severidade de Ameaças'}
+                  </div>
+                  <div className="flex bg-[#141625] p-0.5 rounded border border-[#1e2130]">
+                    <button
+                      type="button"
+                      onClick={() => setWazuhChart('bar')}
+                      className={`px-1.5 py-0.5 text-[8px] font-mono rounded-sm transition-all font-bold ${wazuhChart === 'bar' ? 'bg-[#1e2130] text-[#06b6d4]' : 'text-[#5e6382] hover:text-zinc-300'}`}
+                    >
+                      BARRAS
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setWazuhChart('scatter')}
+                      className={`px-1.5 py-0.5 text-[8px] font-mono rounded-sm transition-all font-bold ${wazuhChart === 'scatter' ? 'bg-[#1e2130] text-rose-400' : 'text-[#5e6382] hover:text-zinc-300'}`}
+                    >
+                      DISPERSÃO
+                    </button>
+                  </div>
                 </div>
                 <div className="grid grid-cols-3 gap-2 mt-2 font-mono">
                   <div className="p-1 px-2 rounded-sm bg-[#141625] border border-[#1e2130] text-center">
@@ -193,18 +239,77 @@ export default function Dashboard({
                 </div>
               </div>
 
-              {/* Alerts historical bars */}
+              {/* Chart rendering based on toggle */}
               <div className="h-[90px] w-full mt-2">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={simulatedTraffic}>
-                    <XAxis dataKey="name" stroke="#2d314d" fontSize={7} tickLine={false} />
-                    <Tooltip
-                      contentStyle={{ backgroundColor: '#05060a', borderColor: '#1e2130', borderRadius: '2px' }}
-                      labelStyle={{ color: '#ffffff', fontSize: '9px', fontFamily: 'monospace' }}
-                      itemStyle={{ color: '#06b6d4', fontSize: '9px', fontFamily: 'monospace' }}
-                    />
-                    <Bar dataKey="alertas" fill="#0891b2" name="Alertas SIEM" radius={[1, 1, 0, 0]} />
-                  </BarChart>
+                  {wazuhChart === 'scatter' ? (
+                    <ScatterChart margin={{ top: 5, right: 5, bottom: -5, left: -25 }}>
+                      <XAxis
+                        type="number"
+                        dataKey="time"
+                        name="Tempo"
+                        unit="s"
+                        stroke="#2d314d"
+                        fontSize={7}
+                        tickLine={false}
+                        domain={[0, 60]}
+                      />
+                      <YAxis
+                        type="number"
+                        dataKey="intensity"
+                        name="Intensidade"
+                        stroke="#2d314d"
+                        fontSize={7}
+                        tickLine={false}
+                        width={20}
+                        domain={[0, 100]}
+                      />
+                      <ZAxis
+                        type="number"
+                        dataKey="impact"
+                        range={[20, 75]}
+                        name="Escopo"
+                      />
+                      <Tooltip
+                        cursor={{ strokeDasharray: '3 3', stroke: '#1e2130' }}
+                        contentStyle={{ backgroundColor: '#05060a', borderColor: '#1e2130', borderRadius: '2px' }}
+                        itemStyle={{ fontSize: '7.5px', fontFamily: 'monospace' }}
+                        labelStyle={{ display: 'none' }}
+                        formatter={(value, name) => {
+                          if (name === "Tempo") return [`${value}s`, "Tempo"];
+                          if (name === "Intensidade") return [`${value}%`, "Vol de Eventos"];
+                          if (name === "Escopo") return [`${value} MB`, "Carga Útil"];
+                          return [value, name];
+                        }}
+                      />
+                      <Scatter name="Ataques" data={scatterData}>
+                        {scatterData.map((entry, index) => {
+                          let color = '#38bdf8'; // sky blue for DDoS/Scan
+                          if (entry.type === 'Crítico') color = '#f43f5e'; // red-pink for Critical
+                          if (entry.type === 'Médio') color = '#fbbf24'; // amber-400 for Medium
+                          return (
+                            <Cell
+                              key={`cell-${index}`}
+                              fill={color}
+                              stroke={color}
+                              strokeWidth={0.5}
+                              fillOpacity={0.7}
+                            />
+                          );
+                        })}
+                      </Scatter>
+                    </ScatterChart>
+                  ) : (
+                    <BarChart data={simulatedTraffic}>
+                      <XAxis dataKey="name" stroke="#2d314d" fontSize={7} tickLine={false} />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: '#05060a', borderColor: '#1e2130', borderRadius: '2px' }}
+                        labelStyle={{ color: '#ffffff', fontSize: '9px', fontFamily: 'monospace' }}
+                        itemStyle={{ color: '#06b6d4', fontSize: '9px', fontFamily: 'monospace' }}
+                      />
+                      <Bar dataKey="alertas" fill="#0891b2" name="Alertas SIEM" radius={[1, 1, 0, 0]} />
+                    </BarChart>
+                  )}
                 </ResponsiveContainer>
               </div>
             </div>

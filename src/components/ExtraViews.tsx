@@ -1388,7 +1388,7 @@ export default function ExtraViews({
                 { r: '1º', name: 'Backbone_God ⚡', level: 144, mttr: '2m 14s', active: false },
                 { r: '2º', name: 'Sudoers_Warlord 🔑', level: 98, mttr: '5m 45s', active: false },
                 { r: '3º', name: 'Packets_Slayer 🦈', level: 75, mttr: '6m 12s', active: false },
-                { r: '4º', name: 'Recrita Ops (Você)', level: profile.level, mttr: '11m 40s', active: true },
+                { r: '4º', name: 'Recruta Ops (Você)', level: profile.level, mttr: '11m 40s', active: true },
                 { r: '5º', name: 'BlueTeam_Br 🛡️', level: 4, mttr: '14m 02s', active: false }
               ].map(user => (
                 <div

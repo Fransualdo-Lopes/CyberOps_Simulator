@@ -51,7 +51,7 @@ export default function App() {
 
   // Gamified User Profile
   const [profile, setProfile] = useState<UserProfile>({
-    username: 'Recrita Ops',
+    username: 'Recruta Ops',
     level: 1,
     xp: 150,
     xpNeeded: 1000,
