@@ -3,6 +3,69 @@ import { AreaChart, Area, BarChart, Bar, ScatterChart, Scatter, ZAxis, Cell, XAx
 import { Activity, ShieldAlert, WifiOff, RefreshCw, BarChart2, Radio, Server, CheckCircle } from 'lucide-react';
 import { IncidentAlert, Challenge } from '../types';
 
+interface CustomScatterDotProps {
+  cx?: number;
+  cy?: number;
+  fill?: string;
+  stroke?: string;
+  strokeWidth?: number;
+  payload?: {
+    time: number;
+    intensity: number;
+    impact: number;
+    type: string;
+  };
+}
+
+const CustomScatterDot = (props: CustomScatterDotProps) => {
+  const { cx, cy, payload, strokeWidth } = props;
+  const [isHovered, setIsHovered] = useState(false);
+
+  if (cx === undefined || cy === undefined) return null;
+
+  let fill = '#38bdf8'; // sky blue for DDoS/Scan
+  if (payload?.type === 'Crítico') {
+    fill = '#f43f5e'; // red-pink for Critical
+  } else if (payload?.type === 'Médio') {
+    fill = '#fbbf24'; // amber-400 for Medium
+  }
+
+  const baseRadius = payload?.impact ? Math.min(8, Math.max(3.5, payload.impact / 8)) : 4.5;
+  const radius = isHovered ? baseRadius * 1.6 : baseRadius;
+
+  return (
+    <g>
+      {/* Dynamic halo ring pulse effect on hover */}
+      {isHovered && (
+        <circle
+          cx={cx}
+          cy={cy}
+          r={radius + 5}
+          fill={fill}
+          fillOpacity={0.15}
+          className="animate-ping"
+          style={{ pointerEvents: 'none' }}
+        />
+      )}
+      <circle
+        cx={cx}
+        cy={cy}
+        r={radius}
+        fill={fill}
+        stroke={isHovered ? '#ffffff' : fill}
+        strokeWidth={isHovered ? 1.5 : (strokeWidth || 0.5)}
+        fillOpacity={isHovered ? 0.95 : 0.72}
+        className="cursor-pointer"
+        style={{
+          transition: 'all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)',
+        }}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      />
+    </g>
+  );
+};
+
 interface DashboardProps {
   alerts: IncidentAlert[];
   challenge: Challenge;
@@ -282,22 +345,7 @@ export default function Dashboard({
                           return [value, name];
                         }}
                       />
-                      <Scatter name="Ataques" data={scatterData}>
-                        {scatterData.map((entry, index) => {
-                          let color = '#38bdf8'; // sky blue for DDoS/Scan
-                          if (entry.type === 'Crítico') color = '#f43f5e'; // red-pink for Critical
-                          if (entry.type === 'Médio') color = '#fbbf24'; // amber-400 for Medium
-                          return (
-                            <Cell
-                              key={`cell-${index}`}
-                              fill={color}
-                              stroke={color}
-                              strokeWidth={0.5}
-                              fillOpacity={0.7}
-                            />
-                          );
-                        })}
-                      </Scatter>
+                      <Scatter name="Ataques" data={scatterData} shape={<CustomScatterDot />} />
                     </ScatterChart>
                   ) : (
                     <BarChart data={simulatedTraffic}>
